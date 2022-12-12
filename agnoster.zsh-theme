@@ -104,8 +104,66 @@ prompt_git() {
       color=green
       ref="${ref} "
     fi
+
     if [[ "${ref/.../}" == "$ref" ]]; then
       ref="$BRANCH $ref"
+    else
+      ref="$DETACHED ${ref/.../}"
+    fi
+    prompt_segment $color $PRIMARY_FG
+    print -n " $ref"
+
+    # local ahead behind
+    # ahead=$(git log --oneline @{upstream}.. 2>/dev/null)
+    # behind=$(git log --oneline ..@{upstream} 2>/dev/null)
+    # if [[ -n "$ahead" ]] && [[ -n "$behind" ]]; then
+    #   PL_BRANCH_CHAR=$'\u21c5'
+    # elif [[ -n "$ahead" ]]; then
+    #   PL_BRANCH_CHAR=$'\u21b1'
+    # elif [[ -n "$behind" ]]; then
+    #   PL_BRANCH_CHAR=$'\u21b0'
+    # fi
+    # 
+    # if [[ -e "${repo_path}/BISECT_LOG" ]]; then
+    #   mode=" <B>"
+    # elif [[ -e "${repo_path}/MERGE_HEAD" ]]; then
+    #   mode=" >M<"
+    # elif [[ -e "${repo_path}/rebase" || -e "${repo_path}/rebase-apply" || -e "${repo_path}/rebase-merge" || -e "${repo_path}/../.dotest" ]]; then
+    #   mode=" >R>"
+    # fi
+    # 
+    # setopt promptsubst
+    # autoload -Uz vcs_info
+    # 
+    # zstyle ':vcs_info:*' enable git
+    # zstyle ':vcs_info:*' get-revision true
+    # zstyle ':vcs_info:*' check-for-changes true
+    # zstyle ':vcs_info:*' stagedstr '✚'
+    # zstyle ':vcs_info:*' unstagedstr '±'
+    # zstyle ':vcs_info:*' formats ' %u%c'
+    # zstyle ':vcs_info:*' actionformats ' %u%c'
+    # vcs_info
+    # echo -n "${${ref:gs/%/%%}/refs\/heads\//$PL_BRANCH_CHAR }${vcs_info_msg_0_%% }${mode}"
+  fi
+}
+
+prompt_bzr() {
+  (( $+commands[bzr] )) || return
+
+  # Test if bzr repository in directory hierarchy
+  local dir="$PWD"
+  while [[ ! -d "$dir/.bzr" ]]; do
+    [[ "$dir" = "/" ]] && return
+    dir="${dir:h}"
+  done
+
+  local bzr_status status_mod status_all revision
+  if bzr_status=$(bzr status 2>&1); then
+    status_mod=$(echo -n "$bzr_status" | head -n1 | grep "modified" | wc -m)
+    status_all=$(echo -n "$bzr_status" | head -n1 | wc -m)
+    revision=${$(bzr log -r-1 --log-format line | cut -d: -f1):gs/%/%%}
+    if [[ $status_mod -gt 0 ]] ; then
+      prompt_segment yellow black "bzr@$revision ✚"
     else
       ref="$DETACHED ${ref/.../}"
     fi
